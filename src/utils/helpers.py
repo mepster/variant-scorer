@@ -16,6 +16,26 @@ from generators.variant_generator import VariantGenerator
 from generators.peak_generator import PeakGenerator
 from utils import argmanager, losses
 
+def get_strategy(args):
+    # get tf strategy to either run on single, or multiple GPUs
+    # you can also do this for cpu only: return tf.distribute.OneDeviceStrategy(device="/cpu:0")
+
+    if vars(args).get('multiGPU') and args.multiGPU:
+        # run the model in "data parallel" mode on multiple GPU devices (on one machine).
+        strategy = tf.distribute.MirroredStrategy()
+        print('Number of GPU devices: {}'.format(strategy.num_replicas_in_sync))
+
+        # workaround to explicitly close strategy. https://github.com/tensorflow/tensorflow/issues/50487
+        # this will supposedly be fixed in tensorflow 2.10
+        version = tf.__version__.split(".")
+        if (int(version[0]) < 2 or int(version[1]) < 10):
+            import atexit
+            atexit.register(strategy._extended._collective_ops._pool.close)
+    else:
+        strategy = tf.distribute.get_strategy()
+        print('Single GPU device')
+
+    return strategy
 
 def get_variant_schema(schema):
     var_SCHEMA = {'original': ['chr', 'pos', 'variant_id', 'allele1', 'allele2'],
@@ -61,12 +81,14 @@ def softmax(x, temp=1):
     norm_x = x - np.mean(x,axis=1, keepdims=True)
     return np.exp(temp*norm_x)/np.sum(np.exp(temp*norm_x), axis=1, keepdims=True)
 
-def load_model_wrapper(model_file):
+def load_model_wrapper(args):
     # read .h5 model
     custom_objects = {"multinomial_nll": losses.multinomial_nll, "tf": tf}
     get_custom_objects().update(custom_objects)
-    model = load_model(model_file, compile=False)
-    print("model loaded succesfully")
+    strategy = get_strategy(args)
+    with strategy.scope():
+        model = load_model(args.model, compile=False)
+    print(f"model {args.model} loaded successfully")
     return model
 
 def fetch_peak_predictions(model, peaks, input_len, genome_fasta, batch_size, debug_mode=False, lite=False,forward_only=False):
