@@ -89,13 +89,13 @@ def softmax(x, temp=1):
     norm_x = x - np.mean(x,axis=1, keepdims=True)
     return np.exp(temp*norm_x)/np.sum(np.exp(temp*norm_x), axis=1, keepdims=True)
 
-def load_model_wrapper(args):
+def load_model_wrapper(args, model_file):
     # read .h5 model
+    custom_objects = {"multinomial_nll": losses.multinomial_nll, "tf": tf}
+    get_custom_objects().update(custom_objects)
     with get_gpu_scope(args):
-        custom_objects = {"multinomial_nll": losses.multinomial_nll, "tf": tf}
-        get_custom_objects().update(custom_objects)
-        model = load_model(args.model, compile=False)
-    print(f"model {args.model} loaded successfully")
+        model = load_model(model_file, compile=False)
+    print(f"model {model_file} loaded successfully")
     return model
 
 def fetch_peak_predictions(model, peaks, input_len, genome_fasta, batch_size, debug_mode=False, lite=False,forward_only=False):

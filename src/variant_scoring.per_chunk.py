@@ -26,7 +26,7 @@ def main():
         raise OSError("Output directory does not exist")
 
     # load the model
-    model = load_model_wrapper(args.model)
+    model = load_model_wrapper(args, args.model)
 
     # load the variants
     variants_table = pd.read_csv(args.list, header=None, sep='\t', names=get_snp_schema(args.schema))

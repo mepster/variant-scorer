@@ -30,7 +30,7 @@ def main():
     if not os.path.exists(out_dir):
         raise OSError("Output directory does not exist")
 
-    model = load_model_wrapper(args)
+    model = load_model_wrapper(args, args.model)
     variants_table = load_variant_table(args.list, args.schema)
     variants_table = variants_table.fillna('-')
 

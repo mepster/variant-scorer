@@ -1,6 +1,7 @@
 from snp_generator import SNPGenerator
 from peak_generator import PeakGenerator
 from utils import argmanager, losses
+from utils.helpers import get_gpu_scope
 import scipy.stats
 from scipy.spatial.distance import jensenshannon
 from tensorflow.keras.utils import get_custom_objects
@@ -32,7 +33,7 @@ def main():
         raise OSError("Output directory does not exist")
 
     # load the model
-    model = load_model_wrapper(args.model)
+    model = load_model_wrapper(args, args.model)
 
     # load the variants
     variants_table = pd.read_csv(args.list, header=None, sep='\t', names=SCHEMA[args.schema])
@@ -191,7 +192,7 @@ def main():
                                                                                                         1 - (scipy.stats.percentileofscore(shuf_percentile_change, x) / 100)))
 
             if args.bias != None:
-                bias = load_model_wrapper(args.bias)
+                bias = load_model_wrapper(args, args.bias)
                 w_bias_rsids, w_bias_allele1_count_preds, w_bias_allele2_count_preds, \
                 w_bias_allele1_profile_preds, w_bias_allele2_profile_preds = fetch_variant_predictions(model,
                                                                                                     variants_chunk,
@@ -344,11 +345,12 @@ def softmax(x, temp=1):
     norm_x = x - np.mean(x,axis=1, keepdims=True)
     return np.exp(temp*norm_x)/np.sum(np.exp(temp*norm_x), axis=1, keepdims=True)
 
-def load_model_wrapper(model_file):
+def load_model_wrapper(args, model_file):
     # read .h5 model
     custom_objects = {"multinomial_nll": losses.multinomial_nll, "tf": tf}
     get_custom_objects().update(custom_objects)
-    model = load_model(model_file, compile=False)
+    with get_gpu_scope(args):
+        model = load_model(model_file, compile=False)
     print("model loaded succesfully")
     return model
 
