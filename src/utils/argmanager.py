@@ -45,7 +45,7 @@ def update_shap_args(parser):
     parser.add_argument("-sc", "--schema", type=str, choices=['bed', 'plink', 'chrombpnet', 'original'], default='chrombpnet', help="Format for the input variants list")
     parser.add_argument("-c", "--chrom", type=str, help="Only score SNPs in selected chromosome")
     parser.add_argument("-st", "--shap_type",  nargs='+', default=["counts"])
-    parser.add_argument('--multiGPU', default=False, action='store_true')
+    # shap doesn't seem to work with multiple GPUs, so don't add the --multiGPU argument.
     
 def fetch_shap_args():
     parser = argparse.ArgumentParser()
