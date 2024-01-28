@@ -16,10 +16,15 @@ from generators.variant_generator import VariantGenerator
 from generators.peak_generator import PeakGenerator
 from utils import argmanager, losses
 
-def get_strategy(args):
-    # get tf strategy to either run on single, or multiple GPUs
-    # you can also do this for cpu only: return tf.distribute.OneDeviceStrategy(device="/cpu:0")
-
+def get_gpu_scope(args):
+    """
+    Get a tf strategy.scope to either run on single, or multiple GPUs.
+    Use it like this:
+        with get_gpu_scope(args):
+            // load model here
+    If --multiGPU is not set, it returns an empty scope that won't change anything.
+    You can still set e.g., CUDA_VISIBLE_DEVICES=1,2 in your environment and it will work.
+    """
     if vars(args).get('multiGPU') and args.multiGPU:
         # run the model in "data parallel" mode on multiple GPU devices (on one machine).
         strategy = tf.distribute.MirroredStrategy()
@@ -31,11 +36,14 @@ def get_strategy(args):
         if (int(version[0]) < 2 or int(version[1]) < 10):
             import atexit
             atexit.register(strategy._extended._collective_ops._pool.close)
-    else:
-        strategy = tf.distribute.get_strategy()
-        print('Single GPU device')
 
-    return strategy
+        return strategy.scope()
+    else:
+        print('Single GPU device')
+        class EmptyScope(object):
+            def __enter__(self): pass
+            def __exit__(self, exc_type, exc_val, exc_tb): pass
+        return EmptyScope()
 
 def get_variant_schema(schema):
     var_SCHEMA = {'original': ['chr', 'pos', 'variant_id', 'allele1', 'allele2'],
@@ -83,10 +91,9 @@ def softmax(x, temp=1):
 
 def load_model_wrapper(args):
     # read .h5 model
-    custom_objects = {"multinomial_nll": losses.multinomial_nll, "tf": tf}
-    get_custom_objects().update(custom_objects)
-    strategy = get_strategy(args)
-    with strategy.scope():
+    with get_gpu_scope(args):
+        custom_objects = {"multinomial_nll": losses.multinomial_nll, "tf": tf}
+        get_custom_objects().update(custom_objects)
         model = load_model(args.model, compile=False)
     print(f"model {args.model} loaded successfully")
     return model
