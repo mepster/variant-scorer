@@ -227,11 +227,13 @@ def fetch_variant_predictions(model, variants_table, input_len, genome_fasta, ba
 
         variant_ids.extend(batch_variant_ids)
 
+    #print("dtypes3:", allele1_pred_profiles.dtype, allele2_pred_profiles.dtype)
     variant_ids = np.array(variant_ids)
     allele1_pred_counts = np.array(allele1_pred_counts)
     allele2_pred_counts = np.array(allele2_pred_counts)
     allele1_pred_profiles = np.array(allele1_pred_profiles)
     allele2_pred_profiles = np.array(allele2_pred_profiles)
+    #print("dtypes4:", allele1_pred_profiles.dtype, allele2_pred_profiles.dtype)
     
     if not forward_only:
         revcomp_allele1_pred_counts = np.array(revcomp_allele1_pred_counts)

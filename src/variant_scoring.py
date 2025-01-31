@@ -13,11 +13,14 @@ from generators.variant_generator import VariantGenerator
 from generators.peak_generator import PeakGenerator
 from utils import argmanager, losses
 from utils.helpers import *
-
+from log_events import EventLog
 
 def main():
     args = argmanager.fetch_scoring_args()
     print(args)
+
+    eventlog = EventLog(filename=args.out_prefix+"_events.log")
+    eventlog.write_event(event_name="start")
 
     np.random.seed(args.random_seed)
     if args.forward_only:
@@ -58,6 +61,7 @@ def main():
     print("Shuffled variants table shape:", shuf_variants_table.shape)
 
     if len(shuf_variants_table) > 0:
+        eventlog.write_event(event_name="fetch_variant_predictions - shuffle")
         if args.debug_mode:
             shuf_variants_table = shuf_variants_table.sample(10000, random_state=args.random_seed, ignore_index=True)
             print()
@@ -77,6 +81,7 @@ def main():
                                                                             forward_only=args.forward_only)
 
     if args.peaks:
+        eventlog.write_event(event_name="fetch_peak_predictions")
         if args.peak_chrom_sizes == None:
             args.peak_chrom_sizes = args.chrom_sizes
         if args.peak_genome == None:
@@ -180,6 +185,7 @@ def main():
         print()
 
     # fetch model prediction for variants
+    eventlog.write_event(event_name="predict variants")
     variant_ids, allele1_pred_counts, allele2_pred_counts, \
     allele1_pred_profiles, allele2_pred_profiles = fetch_variant_predictions(model,
                                                                         variants_table,
@@ -190,7 +196,9 @@ def main():
                                                                         lite=args.lite,
                                                                         shuf=False,
                                                                         forward_only=args.forward_only)
+    #print("dtypes1:", allele1_pred_profiles.dtype, allele2_pred_profiles.dtype)
 
+    eventlog.write_event(event_name="score variants")
     if args.peaks:
         logfc, jsd, \
         allele1_percentile, allele2_percentile = get_variant_scores_with_peaks(allele1_pred_counts,
@@ -268,6 +276,7 @@ def main():
     variants_table.to_csv('.'.join([args.out_prefix, "variant_scores.tsv"]), sep="\t", index=False)
 
     # store predictions at variants
+    #print("dtypes2:", allele1_pred_profiles.dtype, allele2_pred_profiles.dtype)
     if not args.no_hdf5:
         with h5py.File('.'.join([args.out_prefix, "variant_predictions.h5"]), 'w') as f:
             observed = f.create_group('observed')
@@ -294,6 +303,7 @@ def main():
                     shuffled.create_dataset('shuf_logfc_x_jsd_x_max_percentile', data=shuf_logfc_jsd_max_percentile, compression='gzip', compression_opts=9)
                     shuffled.create_dataset('shuf_abs_logfc_x_jsd_x_max_percentile', data=shuf_abs_logfc_jsd_max_percentile, compression='gzip', compression_opts=9)
 
+    eventlog.write_event(event_name="end")
     print("DONE")
     print()
 
