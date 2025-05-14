@@ -199,7 +199,6 @@ def main():
                                                                         lite=args.lite,
                                                                         shuf=False,
                                                                         forward_only=args.forward_only)
-    #print("dtypes1:", allele1_pred_profiles.dtype, allele2_pred_profiles.dtype)
 
     eventlog.write_event(event_name="score variants")
     if args.peaks:
@@ -279,7 +278,6 @@ def main():
     variants_table.to_csv('.'.join([args.out_prefix, "variant_scores.tsv"]), sep="\t", index=False)
 
     # store predictions at variants
-    #print("dtypes2:", allele1_pred_profiles.dtype, allele2_pred_profiles.dtype)
     if not args.no_hdf5:
         with h5py.File('.'.join([args.out_prefix, "variant_predictions.h5"]), 'w') as f:
             observed = f.create_group('observed')
