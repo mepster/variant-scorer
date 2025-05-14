@@ -15,6 +15,9 @@ from utils import argmanager, losses
 from utils.helpers import *
 from log_events import EventLog
 
+print(tf.__version__)
+print([tf.config.experimental.get_device_details(x) for x in tf.config.list_physical_devices("GPU")])
+
 def main():
     args = argmanager.fetch_scoring_args()
     print(args)
