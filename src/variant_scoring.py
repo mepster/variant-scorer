@@ -13,6 +13,8 @@ def main():
     np.random.seed(args.random_seed)
     if args.forward_only:
         print("running variant scoring only for forward sequences")
+    if args.float16:
+        print("outputting profiles in float16 format")
     
     out_dir = os.path.sep.join(args.out_prefix.split(os.path.sep)[:-1])
     if not os.path.exists(out_dir):
@@ -319,8 +321,12 @@ def main():
             observed = f.create_group('observed')
             observed.create_dataset('allele1_pred_counts', data=allele1_pred_counts, compression='gzip', compression_opts=9)
             observed.create_dataset('allele2_pred_counts', data=allele2_pred_counts, compression='gzip', compression_opts=9)
-            observed.create_dataset('allele1_pred_profiles', data=allele1_pred_profiles, compression='gzip', compression_opts=9)
-            observed.create_dataset('allele2_pred_profiles', data=allele2_pred_profiles, compression='gzip', compression_opts=9)
+            if args.float16:
+                observed.create_dataset('allele1_pred_profiles', data=allele1_pred_profiles, compression='gzip', compression_opts=9, dtype='float16')
+                observed.create_dataset('allele2_pred_profiles', data=allele2_pred_profiles, compression='gzip', compression_opts=9, dtype='float16')
+            else:
+                observed.create_dataset('allele1_pred_profiles', data=allele1_pred_profiles, compression='gzip', compression_opts=9)
+                observed.create_dataset('allele2_pred_profiles', data=allele2_pred_profiles, compression='gzip', compression_opts=9)
 
     print()
     print(variants_table.head())
