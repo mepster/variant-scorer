@@ -57,12 +57,47 @@ def softmax(x, temp=1):
     norm_x = x - np.mean(x, axis=1, keepdims=True)
     return np.exp(temp*norm_x)/np.sum(np.exp(temp*norm_x), axis=1, keepdims=True)
 
-def load_model_wrapper(model_file):
+def get_gpu_scope(args):
+    """
+    Get a tf strategy.scope to run training or prediction on single, or multiple GPUs.
+    Use it like this:
+        with get_gpu_scope(args):
+            // load model here
+    If --multiGPU is not set, it returns an empty scope that won't change anything.
+    You can still set e.g., CUDA_VISIBLE_DEVICES=1,2 in your environment and it will work.
+    Inside "with get_gpu_scope(args):" you only need to put:
+        a) model creation
+        b) instantiation of the metrics
+        c) compilation of the model
+    See https://stackoverflow.com/questions/56542778/what-has-to-be-inside-tf-distribute-strategy-scope
+    """
+    if args and args.multiGPU:
+        # run the model in "data parallel" mode on multiple GPU devices (on one machine).
+        strategy = tf.distribute.MirroredStrategy()
+        print('Number of GPU devices: {}'.format(strategy.num_replicas_in_sync))
+
+        # workaround to explicitly close strategy. https://github.com/tensorflow/tensorflow/issues/50487
+        # this will supposedly be fixed in tensorflow 2.10
+        version = tf.__version__.split(".")
+        if (int(version[0]) < 2 or int(version[1]) < 10):
+            import atexit
+            atexit.register(strategy._extended._collective_ops._pool.close)
+
+        return strategy.scope()
+    else:
+        print('Single GPU device')
+        class EmptyScope(object):
+            def __enter__(self): pass
+            def __exit__(self, exc_type, exc_val, exc_tb): pass
+        return EmptyScope()
+
+def load_model_wrapper(model_file, args=None):
     # read .h5 model
-    custom_objects = {"multinomial_nll": losses.multinomial_nll, "tf": tf}
-    get_custom_objects().update(custom_objects)
-    model = load_model(model_file, compile=False)
-    print("model loaded succesfully")
+    with get_gpu_scope(args):
+        custom_objects = {"multinomial_nll": losses.multinomial_nll, "tf": tf}
+        get_custom_objects().update(custom_objects)
+        model = load_model(model_file, compile=False)
+    print(f"model {model_file} loaded successfully")
     return model
 
 def fetch_peak_predictions(model, peaks, input_len, genome_fasta, batch_size, debug_mode=False, lite=False,forward_only=False):

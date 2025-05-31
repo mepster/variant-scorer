@@ -21,7 +21,7 @@ def main():
         raise OSError("Output directory does not exist")
 
     # load the model and variants
-    model = load_model_wrapper(args.model)
+    model = load_model_wrapper(args.model, args)
     variants_table = load_variant_table(args.list, args.schema)
     variants_table = variants_table.fillna('-')
     
