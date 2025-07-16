@@ -52,6 +52,8 @@ python variant_scoring.py -l [VARIANTS_FILE] -g [GENOME_FASTA] -m [MODEL_PATH] -
 
 -st or --shap_type: the type of SHAP values to compute. Default is "counts"
 
+--multiGPU: parallelizes prediction across all the GPUs installed on the machine.
+
 ````
 
 ### Supported Variant List Schemas:
